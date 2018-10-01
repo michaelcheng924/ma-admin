@@ -1,56 +1,95 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { Component } from "react";
+import Route from "react-router-dom/Route";
+import axios from "axios";
+
+import { getStructuredPosts } from "./utils/posts";
+import Login from "./components/Login";
+import Home from "./components/Home";
+import PostDetail from "./components/PostDetail";
+
+import "./App.css";
 
 class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      message: null,
-      fetching: true
+  state = {
+    posts: [],
+    structuredPosts: {},
+    token: null
+  };
+
+  componentDidMount() {
+    const token = localStorage.getItem("ma-admin-token");
+
+    if (token) {
+      axios
+        .post("/api/admin/checktoken", { token }, this.getHeaders())
+        .then(response => {
+          if (response.data.success) {
+            this.afterLogin(token);
+          }
+        });
+    }
+  }
+
+  getHeaders() {
+    const token = localStorage.getItem("ma-admin-token");
+
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
     };
   }
 
-  componentDidMount() {
-    fetch('/api')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`status ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(json => {
-        this.setState({
-          message: json.message,
-          fetching: false
-        });
-      }).catch(e => {
-        this.setState({
-          message: `API call failed: ${e}`,
-          fetching: false
-        });
-      })
+  afterLogin(token) {
+    this.setState({ token });
+
+    axios.get("/api/posts").then(response => {
+      const posts = response.data.posts;
+      const structuredPosts = getStructuredPosts(posts);
+
+      this.setState({ posts, structuredPosts });
+    });
   }
 
-  render() {
+  onLoginSuccess = token => {
+    localStorage.setItem("ma-admin-token", token);
+
+    this.afterLogin(token);
+  };
+
+  renderLogin() {
     return (
-      <div className="App">
-        <div className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h2>Welcome to React</h2>
-        </div>
-        <p className="App-intro">
-          {'This is '}
-          <a href="https://github.com/mars/heroku-cra-node">
-            {'create-react-app with a custom Node/Express server'}
-          </a><br/>
-        </p>
-        <p className="App-intro">
-          {this.state.fetching
-            ? 'Fetching message from API'
-            : this.state.message}
-        </p>
+      <div>
+        <Login onLoginSuccess={this.onLoginSuccess} />
       </div>
+    );
+  }
+
+  renderHome = () => {
+    const { posts, structuredPosts } = this.state;
+
+    return <Home posts={posts} structuredPosts={structuredPosts} />;
+  };
+
+  renderPostDetail = ({ location }) => {
+    const { posts, structuredPosts } = this.state;
+
+    return (
+      <PostDetail
+        location={location}
+        posts={posts}
+        structuredPosts={structuredPosts}
+      />
+    );
+  };
+
+  render() {
+    return this.state.token ? (
+      <div className="App">
+        <Route exact path="/" render={this.renderHome} />
+        <Route path="/postdetail" render={this.renderPostDetail} />
+      </div>
+    ) : (
+      this.renderLogin()
     );
   }
 }

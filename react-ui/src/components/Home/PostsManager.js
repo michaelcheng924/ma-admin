@@ -1,7 +1,8 @@
 import React, { Component } from "react";
+import { Link } from "react-router-dom";
 import { identity, map } from "lodash";
 
-import { ReadingContainer } from "../../Writing";
+import { ReadingContainer } from "../Writing";
 
 const DATA_MAPPING = {
   apologetics: "/categories/apologetics",
@@ -22,7 +23,7 @@ export default class PostsManager extends Component {
 
     return (
       <div>
-        <ReadingContainer style={{ marginBottom: 20 }}>
+        <ReadingContainer>
           <div className="writing">
             <h4>{data.heading}</h4>
           </div>
@@ -41,9 +42,9 @@ export default class PostsManager extends Component {
                 <div className="writing">
                   {categoryData.posts.map(post => {
                     return (
-                      <p key={post.url} className="nomargin indent">
-                        {post.title}
-                      </p>
+                      <Link key={post.url} to={`/postdetail?url=${post.url}`}>
+                        <p className="nomargin indent">{post.title}</p>
+                      </Link>
                     );
                   })}
                 </div>

@@ -1,28 +1,24 @@
 const express = require("express");
 const path = require("path");
-const cluster = require("cluster");
-const numCPUs = require("os").cpus().length;
+const bodyParser = require("body-parser");
+require("dotenv").config();
 
-const PORT = process.env.PORT || 5000;
+const routes = require("./routes");
+
+const PORT = process.env.PORT || 4000;
 
 const app = express();
 
-// Priority serve any static files.
+app.use(bodyParser.json());
+
+routes(app);
+
 app.use(express.static(path.resolve(__dirname, "../react-ui/build")));
 
-// Answer API requests.
-app.get("/api", function(req, res) {
-  res.set("Content-Type", "application/json");
-  res.send('{"message":"Hello from the custom server!"}');
-});
-
-// All remaining requests return the React app, so it can handle routing.
-app.get("*", function(request, response) {
+app.get("/*", function(request, response) {
   response.sendFile(path.resolve(__dirname, "../react-ui/build", "index.html"));
 });
 
 app.listen(PORT, function() {
-  console.error(
-    `Node cluster worker ${process.pid}: listening on port ${PORT}`
-  );
+  console.error(`Server listening on port ${PORT}`);
 });
