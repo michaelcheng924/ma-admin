@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const cors = require("cors");
 
 const db = require("./db");
 
@@ -23,7 +24,7 @@ function authorize(req, res, next) {
 }
 
 function routes(app) {
-  app.get("/api/posts", (req, res) => {
+  app.get("/api/posts", cors(), (req, res) => {
     db.collection("posts")
       .get()
       .then(snapshot => {
