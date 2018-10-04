@@ -1,5 +1,6 @@
 import "./styles.css";
 import React, { Component } from "react";
+import { Link } from "react-router-dom";
 
 import { ReadingContainer } from "../Writing";
 import PostsManager from "./PostsManager";
@@ -27,6 +28,11 @@ class App extends Component {
     return (
       <div>
         <h2>Posts Manager</h2>
+        <div>
+          <Link to="/newpost">
+            <button>New Post</button>
+          </Link>
+        </div>
         <div className="admin__categories">
           <div onClick={() => this.setState({ root: "apologetics" })}>
             Apologetics
@@ -47,6 +53,9 @@ class App extends Component {
   render() {
     return (
       <ReadingContainer style={{ marginBottom: 20 }}>
+        <div>
+          <Link to="/dbmanagement">DB Management</Link>
+        </div>
         <div>{this.renderPostsManager()}</div>
       </ReadingContainer>
     );

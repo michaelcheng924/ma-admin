@@ -2,7 +2,7 @@ import "./styles.css";
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { find, map } from "lodash";
+import { map } from "lodash";
 import Textarea from "react-textarea-autosize";
 import AceEditor from "react-ace";
 
@@ -11,23 +11,52 @@ import { ReadingContainer } from "../Writing";
 import "brace/mode/html";
 import "brace/theme/github";
 
-export default class PostDetail extends Component {
+export default class NewPost extends Component {
   constructor(props) {
     super(props);
 
-    const { location, posts } = this.props;
+    const rootData =
+      props.structuredPosts[Object.keys(props.structuredPosts)[0]];
 
-    const searchUrl = location.search.split("url=")[1];
-
-    const post =
-      find(posts, postData => {
-        return postData.url === searchUrl;
-      }) || {};
+    const categoryData =
+      rootData.categories[Object.keys(rootData.categories)[0]];
 
     this.state = {
-      post
+      post: {
+        title: "",
+        subtitle: "",
+        imageUrl: "",
+        url: "",
+        added: "",
+        updated: "",
+        tags: [],
+        root: {
+          url: rootData.url,
+          heading: rootData.heading
+        },
+        category: {
+          url: categoryData.url,
+          category: categoryData.category
+        }
+      },
+      newCategory: {
+        url: "",
+        category: ""
+      }
     };
   }
+  state = {
+    post: {
+      title: "",
+      subtitle: "",
+      imageUrl: "",
+      url: "",
+      added: "",
+      updated: "",
+      tags: [],
+      root: {}
+    }
+  };
 
   onChange = event => {
     let post = this.state.post;
@@ -46,15 +75,26 @@ export default class PostDetail extends Component {
         url: root.url,
         heading: root.heading
       };
+
+      const newCategory = root.categories[Object.keys(root.categories)[0]];
+
+      post.category = {
+        url: newCategory.url,
+        category: newCategory.category
+      };
     }
 
     if (name === "category") {
       const category = structuredPosts[post.root.url].categories[value];
 
-      value = {
-        url: category.url,
-        category: category.category
-      };
+      if (category) {
+        value = {
+          url: category.url,
+          category: category.category
+        };
+      } else {
+        value = this.state.newCategory;
+      }
     }
 
     post[name] = value;
@@ -70,38 +110,75 @@ export default class PostDetail extends Component {
     this.setState({ post });
   };
 
-  onUpdate(url) {
+  onNewCategoryChange = event => {
+    const { name, value } = event.target;
+    let { newCategory } = this.state;
+
+    newCategory[name] = value;
+
+    this.setState({ newCategory });
+  };
+
+  validate() {
+    const { post } = this.state;
+
+    let validated = true;
+
+    const keys = [
+      "id",
+      "title",
+      "subtitle",
+      "imageUrl",
+      "url",
+      "content",
+      "tags"
+    ];
+
+    keys.forEach(key => {
+      if (!post[key]) {
+        validated = false;
+      }
+    });
+
+    return validated;
+  }
+
+  onCreate(url) {
+    if (!this.validate()) {
+      window.confirm("Missing fields");
+      return;
+    }
+
     const confirm = window.confirm("Are you sure?");
 
     if (confirm) {
       const { getPosts } = this.props;
 
-      let post = this.state.post;
-      post.post = undefined;
-
       axios
         .post(
           url,
           {
-            post
+            post: this.state.post
           },
           this.props.getHeaders()
         )
         .then(response => {
           if (response.data.success) {
-            window.alert("Update successful!");
-            getPosts();
+            window.alert("Create successful!");
+            getPosts().then(() => {
+              this.props.history.push(`/postdetail?url=${this.state.post.url}`);
+            });
           }
         });
     }
   }
 
-  updatePost = () => {
-    this.onUpdate("/api/admin/updatepost");
+  createPost = () => {
+    this.onCreate("/api/admin/createpost");
   };
 
-  updateStaging = () => {
-    this.onUpdate("/api/admin/updatestaging");
+  createStaging = () => {
+    this.onCreate("/api/admin/createstaging");
   };
 
   renderRoots() {
@@ -122,21 +199,41 @@ export default class PostDetail extends Component {
   }
 
   renderCategories() {
-    const { category, root } = this.state.post;
+    const { post, newCategory } = this.state;
+    const { category, root } = post;
     const { structuredPosts } = this.props;
 
     const categories = structuredPosts[root.url].categories;
 
     return (
-      <select name="category" onChange={this.onChange} value={category.url}>
-        {map(categories, category => {
-          return (
-            <option key={category.url} value={category.url}>
-              {category.category}
-            </option>
-          );
-        })}
-      </select>
+      <div>
+        <select name="category" onChange={this.onChange} value={category.url}>
+          {map(categories, category => {
+            return (
+              <option key={category.url} value={category.url}>
+                {category.category}
+              </option>
+            );
+          })}
+          <option value={newCategory.url}>{newCategory.category}</option>
+        </select>
+        <div>
+          <input
+            placeholder="New cateogry URL"
+            name="url"
+            onChange={this.onNewCategoryChange}
+            value={newCategory.url}
+          />
+        </div>
+        <div>
+          <input
+            placeholder="New cateogry category"
+            name="category"
+            onChange={this.onNewCategoryChange}
+            value={newCategory.category}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -188,7 +285,6 @@ export default class PostDetail extends Component {
 
   render() {
     const {
-      id,
       title,
       subtitle,
       imageUrl,
@@ -214,7 +310,6 @@ export default class PostDetail extends Component {
               </div>
             );
           })}
-          <h4>{id}</h4>
           <div className="post-detail">
             {this.renderRoots()}
             {this.renderCategories()}
@@ -285,8 +380,8 @@ export default class PostDetail extends Component {
         {this.renderContent()}
 
         <div className="post-detail__save-buttons">
-          <button onClick={this.updatePost}>Update Posts</button>
-          <button onClick={this.updateStaging}>Update Staging</button>
+          <button onClick={this.createPost}>Create Posts</button>
+          <button onClick={this.createStaging}>Create Staging</button>
         </div>
       </div>
     );

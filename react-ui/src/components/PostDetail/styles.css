@@ -1,0 +1,45 @@
+.post-detail textarea {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 20px;
+  padding: 5px;
+  width: 100%;
+}
+
+.post-detail .post-detail__title {
+  font-size: 36px;
+  font-weight: 500;
+}
+
+.post-detail .post-detail__subtitle {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.post-detail__content-container {
+  display: flex;
+  justify-content: space-around;
+}
+
+.post-detail__content-styled {
+  flex-grow: 1;
+  max-width: 700px;
+  padding-left: 20px;
+}
+
+.post-detail__save-buttons {
+  position: fixed;
+  right: 0;
+  top: 0;
+}
+
+.post-detail__save-buttons button {
+  background: #039BE5;
+  color: #FFF;
+  margin-left: 10px;
+}
+
+.ace_editor {
+  width: 700px !important;
+}
