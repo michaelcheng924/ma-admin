@@ -1,9 +1,22 @@
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const { isArray } = require("lodash");
+const request = require("request");
 
 const db = require("./db");
 const data = require("../backup");
+
+// request.get(
+//   {
+//     url: "https://api.esv.org/v3/passage/text/?q=John+11:35",
+//     headers: {
+//       Authorization: "Token 231ff21ec1223742fb4e7e65e23ac642b4cef0af"
+//     }
+//   },
+//   response => {
+//     console.log(response);
+//   }
+// );
 
 function authorize(req, res, next) {
   if (!req.headers.authorization) {
@@ -53,9 +66,9 @@ function resetPosts(res, collection, collectionData) {
 }
 
 function update(res, collection, post) {
-  if (!validate(post)) {
+  if (!validate(post, true)) {
     res.status(400);
-    res.send({ success: false });
+    res.send({ success: false, message: "Failed validation" });
     return;
   }
 
@@ -70,22 +83,33 @@ function update(res, collection, post) {
 function create(res, collection, post) {
   if (!validate(post)) {
     res.status(400);
-    res.send({ success: false });
+    res.send({ success: false, message: "Failed validation" });
     return;
   }
 
   db.collection(collection)
     .doc()
-    .set({ post })
+    .set(post)
     .then(() => {
       res.send({ success: true });
     });
 }
 
-function validate(post) {
+function validate(post, isUpdate) {
   let validated = true;
 
-  const keys = ["id", "title", "subtitle", "imageUrl", "url", "content"];
+  const keys = [
+    "title",
+    "subtitle",
+    "imageUrl",
+    "imageUrlSmall",
+    "url",
+    "content"
+  ];
+
+  if (isUpdate) {
+    keys.push("id");
+  }
 
   keys.forEach(key => {
     if (!post[key]) {
@@ -144,8 +168,14 @@ function routes(app) {
           .get()
           .then(stagingSnapshot => {
             res.send({
-              posts: postsSnapshot.docs.map(doc => doc.data()),
-              staging: stagingSnapshot.docs.map(doc => doc.data()),
+              posts: postsSnapshot.docs.map(doc => ({
+                ...doc.data(),
+                id: doc.id
+              })),
+              staging: stagingSnapshot.docs.map(doc => ({
+                ...doc.data(),
+                id: doc.id
+              })),
               backup: data
             });
           });
@@ -219,8 +249,8 @@ function routes(app) {
 
   app.post("/api/admin/createstaging", authorize, (req, res) => {
     const { post } = req.body;
-    console.log(post);
-    // create(res, "posts_staging", post);
+
+    create(res, "posts_staging", post);
   });
 }
 

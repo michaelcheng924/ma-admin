@@ -25,7 +25,11 @@ export default class PostDetail extends Component {
       }) || {};
 
     this.state = {
-      post
+      post,
+      newCategory: {
+        url: "",
+        category: ""
+      }
     };
   }
 
@@ -57,6 +61,10 @@ export default class PostDetail extends Component {
       };
     }
 
+    if (name === "index") {
+      value = Number(value);
+    }
+
     post[name] = value;
 
     this.setState({ post });
@@ -69,6 +77,40 @@ export default class PostDetail extends Component {
 
     this.setState({ post });
   };
+
+  onNewCategoryChange = event => {
+    const { name, value } = event.target;
+    let { newCategory } = this.state;
+
+    newCategory[name] = value;
+
+    this.setState({ newCategory });
+  };
+
+  validate() {
+    const { post } = this.state;
+
+    let validated = true;
+
+    const keys = [
+      "id",
+      "title",
+      "subtitle",
+      "imageUrl",
+      "imageUrlSmall",
+      "url",
+      "content",
+      "tags"
+    ];
+
+    keys.forEach(key => {
+      if (!post[key]) {
+        validated = false;
+      }
+    });
+
+    return validated;
+  }
 
   onUpdate(url) {
     const confirm = window.confirm("Are you sure?");
@@ -107,7 +149,7 @@ export default class PostDetail extends Component {
   renderRoots() {
     const { root } = this.state.post;
     const { structuredPosts } = this.props;
-
+    console.log(this.state.post);
     return (
       <select name="root" onChange={this.onChange} value={root.url}>
         {map(structuredPosts, root => {
@@ -122,21 +164,62 @@ export default class PostDetail extends Component {
   }
 
   renderCategories() {
-    const { category, root } = this.state.post;
+    const { post, newCategory } = this.state;
+    const { category, index, root } = post;
     const { structuredPosts } = this.props;
 
     const categories = structuredPosts[root.url].categories;
 
+    const categoryData = structuredPosts[root.url].categories[category.url];
+
     return (
-      <select name="category" onChange={this.onChange} value={category.url}>
-        {map(categories, category => {
-          return (
-            <option key={category.url} value={category.url}>
-              {category.category}
-            </option>
-          );
-        })}
-      </select>
+      <div>
+        <select name="category" onChange={this.onChange} value={category.url}>
+          {map(categories, category => {
+            return (
+              <option key={category.url} value={category.url}>
+                {category.category}
+              </option>
+            );
+          })}
+        </select>
+        <br />
+        <div>
+          <input
+            placeholder="New cateogry URL"
+            name="url"
+            onChange={this.onNewCategoryChange}
+            value={newCategory.url}
+          />
+        </div>
+        <div>
+          <input
+            placeholder="New cateogry category"
+            name="category"
+            onChange={this.onNewCategoryChange}
+            value={newCategory.category}
+          />
+        </div>
+        <br />
+        {categoryData
+          ? categoryData.posts.map(post => {
+              return (
+                <div key={post.url}>
+                  {post.index} | {post.title}
+                </div>
+              );
+            })
+          : "No other posts in this category"}
+        <br />
+        <input
+          type="number"
+          name="index"
+          value={index}
+          onChange={this.onChange}
+        />
+        <br />
+        <br />
+      </div>
     );
   }
 

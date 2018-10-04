@@ -109,7 +109,7 @@ class App extends Component {
   };
 
   renderPostDetail = ({ location }) => {
-    const { staging, structuredStaging, token } = this.state;
+    const { staging, structuredStaging } = this.state;
 
     if (!staging.length) {
       return "Loading...";

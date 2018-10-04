@@ -138,9 +138,7 @@ h1 {
 
 .writing blockquote {
   font-style: italic;
-  left: -20px;
   padding-left: 20px;
-  position: relative;
 }
 
 .writing .first {

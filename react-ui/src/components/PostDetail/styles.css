@@ -41,5 +41,6 @@
 }
 
 .ace_editor {
+  margin-top: auto;
   width: 700px !important;
 }

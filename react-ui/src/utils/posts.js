@@ -1,5 +1,7 @@
+import { each } from "lodash";
+
 function getStructuredPosts(posts) {
-  return posts.reduce((result, post) => {
+  let result = posts.reduce((result, post) => {
     const { root, category } = post;
 
     if (!result[root.url]) {
@@ -18,10 +20,22 @@ function getStructuredPosts(posts) {
       };
     }
 
-    result[root.url].categories[category.url].posts[post.index] = post;
+    const categoryPosts = result[root.url].categories[category.url].posts;
+
+    categoryPosts.push(post);
 
     return result;
   }, {});
+
+  each(result, rootData => {
+    each(rootData.categories, categoryData => {
+      categoryData.posts.sort((a, b) => {
+        return a.index - b.index;
+      });
+    });
+  });
+
+  return result;
 }
 
 export { getStructuredPosts };

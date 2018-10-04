@@ -20,7 +20,8 @@
     "firebase-admin": "^6.0.0",
     "jsonwebtoken": "^8.3.0",
     "lodash": "^4.17.11",
-    "nodemon": "^1.18.4"
+    "nodemon": "^1.18.4",
+    "request": "^2.88.0"
   },
   "repository": {
     "type": "git",

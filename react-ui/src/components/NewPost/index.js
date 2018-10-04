@@ -49,6 +49,7 @@ export default class NewPost extends Component {
     post: {
       title: "",
       subtitle: "",
+      index: 0,
       imageUrl: "",
       url: "",
       added: "",
@@ -125,10 +126,10 @@ export default class NewPost extends Component {
     let validated = true;
 
     const keys = [
-      "id",
       "title",
       "subtitle",
       "imageUrl",
+      "imageUrlSmall",
       "url",
       "content",
       "tags"
@@ -145,7 +146,7 @@ export default class NewPost extends Component {
 
   onCreate(url) {
     if (!this.validate()) {
-      window.confirm("Missing fields");
+      window.alert("Missing fields");
       return;
     }
 
@@ -200,10 +201,12 @@ export default class NewPost extends Component {
 
   renderCategories() {
     const { post, newCategory } = this.state;
-    const { category, root } = post;
+    const { category, index, root } = post;
     const { structuredPosts } = this.props;
 
     const categories = structuredPosts[root.url].categories;
+
+    const categoryData = structuredPosts[root.url].categories[category.url];
 
     return (
       <div>
@@ -217,6 +220,7 @@ export default class NewPost extends Component {
           })}
           <option value={newCategory.url}>{newCategory.category}</option>
         </select>
+        <br />
         <div>
           <input
             placeholder="New cateogry URL"
@@ -233,6 +237,20 @@ export default class NewPost extends Component {
             value={newCategory.category}
           />
         </div>
+        <br />
+        {categoryData
+          ? categoryData.posts.map(post => {
+              return (
+                <div key={post.url}>
+                  {post.index} | {post.title}
+                </div>
+              );
+            })
+          : "No other posts in this category"}
+        <br />
+        <input name="index" value={index} onChange={this.onChange} />
+        <br />
+        <br />
       </div>
     );
   }
