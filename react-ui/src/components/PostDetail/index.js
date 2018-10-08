@@ -2,7 +2,7 @@ import "./styles.css";
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { find, map } from "lodash";
+import { find, map, partial } from "lodash";
 import Textarea from "react-textarea-autosize";
 import AceEditor from "react-ace";
 
@@ -33,6 +33,43 @@ export default class PostDetail extends Component {
     };
   }
 
+  getContentWithReferences() {
+    let { content, references } = this.state.post;
+
+    if (!references || !references[0]) {
+      return content;
+    }
+
+    const matches = content.match(/\[[0-9]+\]/g);
+
+    content = matches.reduce((result, match, index) => {
+      const number = index + 1;
+
+      return result.replace(
+        match,
+        `<span class="superscript"><a href="#footnote-${number}" id="text-${number}">[${number}]</a></span>`
+      );
+    }, content);
+
+    return `
+      ${content}
+
+      <div class="writing">
+        <h4>References</h4>
+
+        <ol class="first">
+          ${references
+            .map((reference, index) => {
+              const number = index + 1;
+
+              return `<li><a class="reference-arrow" href="#text-${number}" id="footnote-${number}">^</a> ${reference}</li>`;
+            })
+            .join("\n")}
+        </ol>
+      </div>
+    `;
+  }
+
   onChange = event => {
     let post = this.state.post;
     const { structuredPosts } = this.props;
@@ -41,6 +78,10 @@ export default class PostDetail extends Component {
 
     if (name === "tags") {
       value = value.split(",");
+    }
+
+    if (name === "references") {
+      value = value.split("\n");
     }
 
     if (name === "root") {
@@ -85,6 +126,13 @@ export default class PostDetail extends Component {
     newCategory[name] = value;
 
     this.setState({ newCategory });
+  };
+
+  onReferenceChange = (index, event) => {
+    const post = this.state.post;
+    post.references[index] = event.target.value;
+
+    this.setState({ post });
   };
 
   validate() {
@@ -149,7 +197,7 @@ export default class PostDetail extends Component {
   renderRoots() {
     const { root } = this.state.post;
     const { structuredPosts } = this.props;
-    console.log(this.state.post);
+
     return (
       <select name="root" onChange={this.onChange} value={root.url}>
         {map(structuredPosts, root => {
@@ -223,22 +271,8 @@ export default class PostDetail extends Component {
     );
   }
 
-  renderReferences() {
-    const { references = [] } = this.state.post;
-
-    return (
-      <div className="post-detail__references">
-        <h4>References</h4>
-        {references.map((reference, index) => {
-          return <Textarea value={reference} placeholder={index + 1} />;
-        })}
-        <Textarea placeholder={references.length + 1} />
-      </div>
-    );
-  }
-
   renderContent() {
-    const { content } = this.state.post;
+    const contentWithReferences = this.getContentWithReferences();
 
     return (
       <div className="post-detail__content-container">
@@ -251,7 +285,7 @@ export default class PostDetail extends Component {
           showPrintMargin={true}
           showGutter={true}
           highlightActiveLine={true}
-          value={content}
+          value={this.state.post.content}
           setOptions={{
             showLineNumbers: true,
             tabSize: 2
@@ -263,7 +297,7 @@ export default class PostDetail extends Component {
         />
         <div
           className="post-detail__content-styled"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: contentWithReferences }}
         />
       </div>
     );
@@ -279,7 +313,8 @@ export default class PostDetail extends Component {
       url,
       added,
       updated,
-      tags = []
+      tags = [],
+      references = []
     } = this.state.post;
 
     return (
@@ -361,11 +396,24 @@ export default class PostDetail extends Component {
               name="tags"
               placeholder="Tags"
             />
-            {this.renderReferences()}
           </div>
         </ReadingContainer>
 
         {this.renderContent()}
+
+        <div className="post-detail">
+          <ReadingContainer>
+            <Textarea
+              value={references.join("\n")}
+              onChange={this.onChange}
+              name="references"
+              placeholder="References"
+            />
+            {references.map((reference, index) => {
+              return <div key={reference}>{`${index + 1}. ${reference}`}</div>;
+            })}
+          </ReadingContainer>
+        </div>
 
         <div className="post-detail__save-buttons">
           <button onClick={this.updatePost}>Update Posts</button>

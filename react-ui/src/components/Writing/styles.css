@@ -172,11 +172,15 @@ h1 {
   text-decoration: none;
 }
 
-.writing span {
+.writing .superscript {
   font-size: 14px;
   margin-left: 2px;
   position: relative;
   top: -5px;
+}
+
+.writing .scripture {
+  color: #039BE5;
 }
 
 .writing .caret-down {

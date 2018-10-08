@@ -6,18 +6,6 @@ const request = require("request");
 const db = require("./db");
 const data = require("../backup");
 
-// request.get(
-//   {
-//     url: "https://api.esv.org/v3/passage/text/?q=John+11:35",
-//     headers: {
-//       Authorization: "Token 231ff21ec1223742fb4e7e65e23ac642b4cef0af"
-//     }
-//   },
-//   response => {
-//     console.log(response);
-//   }
-// );
-
 function authorize(req, res, next) {
   if (!req.headers.authorization) {
     res.send({
@@ -196,6 +184,17 @@ function routes(app) {
             };
           })
         );
+      });
+  });
+
+  app.post("/api/admin/sitemap", authorize, (req, res) => {
+    db.collection("sitemap")
+      .doc("sitemap")
+      .set({
+        sitemap: req.body.sitemap
+      })
+      .then(() => {
+        res.send({ success: true });
       });
   });
 

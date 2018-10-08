@@ -2,10 +2,15 @@ import "./styles.css";
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import Textarea from "react-textarea-autosize";
 
 import ListItem from "../ListItem";
 
 export default class DBManagement extends Component {
+  state = {
+    sitemap: ""
+  };
+
   backUpDatabase = () => {
     axios.post("/api/admin/backup", {}, this.props.getHeaders()).then(() => {
       window.alert("Posts backed up!");
@@ -44,6 +49,20 @@ export default class DBManagement extends Component {
           window.alert("Reset staging!");
         });
     }
+  };
+
+  onSubmitSitemap = () => {
+    axios
+      .post(
+        "/api/admin/sitemap",
+        {
+          sitemap: this.state.sitemap
+        },
+        this.props.getHeaders()
+      )
+      .then(() => {
+        this.setState({ sitemap: "" });
+      });
   };
 
   renderDBData() {
@@ -88,6 +107,15 @@ export default class DBManagement extends Component {
         </div>
         <div>
           <button onClick={this.migrate}>Migrate</button>
+        </div>
+        <Textarea
+          placeholder="Sitemap"
+          value={this.state.sitemap}
+          onChange={event => this.setState({ sitemap: event.target.value })}
+          style={{ width: "100%" }}
+        />
+        <div>
+          <button onClick={this.onSubmitSitemap}>Submit Sitemap</button>
         </div>
         {this.renderDBData()}
       </div>

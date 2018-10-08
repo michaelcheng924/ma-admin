@@ -14,6 +14,7 @@ import "./App.css";
 class App extends Component {
   state = {
     backup: "",
+    passages: [],
     posts: [],
     staging: [],
     structuredPosts: {},

@@ -30,6 +30,8 @@ export default class NewPost extends Component {
         added: "",
         updated: "",
         tags: [],
+        content: "",
+        references: [],
         root: {
           url: rootData.url,
           heading: rootData.heading
@@ -45,19 +47,45 @@ export default class NewPost extends Component {
       }
     };
   }
-  state = {
-    post: {
-      title: "",
-      subtitle: "",
-      index: 0,
-      imageUrl: "",
-      url: "",
-      added: "",
-      updated: "",
-      tags: [],
-      root: {}
+
+  getContentWithReferences() {
+    let { content, references } = this.state.post;
+
+    if (!references || !references[0]) {
+      return content;
     }
-  };
+
+    const matches = content.match(/\[[0-9]+\]/g);
+
+    if (matches) {
+      content = matches.reduce((result, match, index) => {
+        const number = index + 1;
+
+        return result.replace(
+          match,
+          `<span class="superscript"><a href="#footnote-${number}" id="text-${number}">[${number}]</a></span>`
+        );
+      }, content);
+    }
+
+    return `
+      ${content}
+
+      <div class="writing">
+        <h4>References</h4>
+
+        <ol class="first">
+          ${references
+            .map((reference, index) => {
+              const number = index + 1;
+
+              return `<li><a class="reference-arrow" href="#text-${number}" id="footnote-${number}">^</a> ${reference}</li>`;
+            })
+            .join("\n")}
+        </ol>
+      </div>
+    `;
+  }
 
   onChange = event => {
     let post = this.state.post;
@@ -67,6 +95,10 @@ export default class NewPost extends Component {
 
     if (name === "tags") {
       value = value.split(",");
+    }
+
+    if (name === "references") {
+      value = value.split("\n");
     }
 
     if (name === "root") {
@@ -255,22 +287,10 @@ export default class NewPost extends Component {
     );
   }
 
-  renderReferences() {
-    const { references = [] } = this.state.post;
-
-    return (
-      <div className="post-detail__references">
-        <h4>References</h4>
-        {references.map((reference, index) => {
-          return <Textarea value={reference} placeholder={index + 1} />;
-        })}
-        <Textarea placeholder={references.length + 1} />
-      </div>
-    );
-  }
-
   renderContent() {
     const { content } = this.state.post;
+
+    const contentWithReferences = this.getContentWithReferences();
 
     return (
       <div className="post-detail__content-container">
@@ -295,7 +315,7 @@ export default class NewPost extends Component {
         />
         <div
           className="post-detail__content-styled"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: contentWithReferences }}
         />
       </div>
     );
@@ -310,7 +330,8 @@ export default class NewPost extends Component {
       url,
       added,
       updated,
-      tags = []
+      tags = [],
+      references
     } = this.state.post;
 
     return (
@@ -391,11 +412,24 @@ export default class NewPost extends Component {
               name="tags"
               placeholder="Tags"
             />
-            {this.renderReferences()}
           </div>
         </ReadingContainer>
 
         {this.renderContent()}
+
+        <div className="post-detail">
+          <ReadingContainer>
+            <Textarea
+              value={references.join("\n")}
+              onChange={this.onChange}
+              name="references"
+              placeholder="References"
+            />
+            {references.map((reference, index) => {
+              return <div key={reference}>{`${index + 1}. ${reference}`}</div>;
+            })}
+          </ReadingContainer>
+        </div>
 
         <div className="post-detail__save-buttons">
           <button onClick={this.createPost}>Create Posts</button>
