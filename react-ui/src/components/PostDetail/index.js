@@ -2,7 +2,7 @@ import "./styles.css";
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { find, map, partial } from "lodash";
+import { find, isArray, map, partial } from "lodash";
 import Textarea from "react-textarea-autosize";
 import AceEditor from "react-ace";
 
@@ -25,7 +25,10 @@ export default class PostDetail extends Component {
       }) || {};
 
     this.state = {
-      post,
+      post: {
+        ...post,
+        category: isArray(post.category) ? post.category : [post.category]
+      },
       newCategory: {
         url: "",
         category: ""
@@ -93,15 +96,6 @@ export default class PostDetail extends Component {
       };
     }
 
-    if (name === "category") {
-      const category = structuredPosts[post.root.url].categories[value];
-
-      value = {
-        url: category.url,
-        category: category.category
-      };
-    }
-
     if (name === "index") {
       value = Number(value);
     }
@@ -126,6 +120,28 @@ export default class PostDetail extends Component {
     newCategory[name] = value;
 
     this.setState({ newCategory });
+  };
+
+  onChangeCategory = (index, event) => {
+    const { post } = this.state;
+    const { structuredPosts } = this.props;
+
+    let value = event.target.value;
+
+    const foundCategory = structuredPosts[post.root.url].categories[value];
+
+    if (foundCategory) {
+      value = {
+        url: foundCategory.url,
+        category: foundCategory.category
+      };
+    } else {
+      value = this.state.newCategory;
+    }
+
+    post.category[index] = value;
+
+    this.setState({ post });
   };
 
   onReferenceChange = (index, event) => {
@@ -199,15 +215,18 @@ export default class PostDetail extends Component {
     const { structuredPosts } = this.props;
 
     return (
-      <select name="root" onChange={this.onChange} value={root.url}>
-        {map(structuredPosts, root => {
-          return (
-            <option key={root.url} value={root.url}>
-              {root.heading}
-            </option>
-          );
-        })}
-      </select>
+      <div>
+        <h3>Root</h3>
+        <select name="root" onChange={this.onChange} value={root.url}>
+          {map(structuredPosts, root => {
+            return (
+              <option key={root.url} value={root.url}>
+                {root.heading}
+              </option>
+            );
+          })}
+        </select>
+      </div>
     );
   }
 
@@ -222,14 +241,44 @@ export default class PostDetail extends Component {
 
     return (
       <div>
-        <select name="category" onChange={this.onChange} value={category.url}>
-          {map(categories, category => {
+        <h3>Categories</h3>
+        {category.map((categoryData, index) => {
+          return (
+            <select
+              key={categoryData.url}
+              name="category"
+              onChange={partial(this.onChangeCategory, index)}
+              value={categoryData.url}
+            >
+              {map(categories, existingCategory => {
+                return (
+                  <option
+                    key={existingCategory.url}
+                    value={existingCategory.url}
+                  >
+                    {existingCategory.category}
+                  </option>
+                );
+              })}
+              <option value={newCategory.url}>{newCategory.category}</option>
+            </select>
+          );
+        })}
+        <br />
+        <select
+          name="category"
+          onChange={partial(this.onChangeCategory, category.length)}
+          value=""
+        >
+          <option value="">Add category</option>
+          {map(categories, existingCategory => {
             return (
-              <option key={category.url} value={category.url}>
-                {category.category}
+              <option key={existingCategory.url} value={existingCategory.url}>
+                {existingCategory.category}
               </option>
             );
           })}
+          <option value={newCategory.url}>{newCategory.category}</option>
         </select>
         <br />
         <div>

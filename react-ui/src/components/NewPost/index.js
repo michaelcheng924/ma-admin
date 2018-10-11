@@ -2,7 +2,7 @@ import "./styles.css";
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { map } from "lodash";
+import { map, partial } from "lodash";
 import Textarea from "react-textarea-autosize";
 import AceEditor from "react-ace";
 
@@ -17,9 +17,6 @@ export default class NewPost extends Component {
 
     const rootData =
       props.structuredPosts[Object.keys(props.structuredPosts)[0]];
-
-    const categoryData =
-      rootData.categories[Object.keys(rootData.categories)[0]];
 
     this.state = {
       post: {
@@ -36,10 +33,7 @@ export default class NewPost extends Component {
           url: rootData.url,
           heading: rootData.heading
         },
-        category: {
-          url: categoryData.url,
-          category: categoryData.category
-        }
+        category: []
       },
       newCategory: {
         url: "",
@@ -111,23 +105,12 @@ export default class NewPost extends Component {
 
       const newCategory = root.categories[Object.keys(root.categories)[0]];
 
-      post.category = {
-        url: newCategory.url,
-        category: newCategory.category
-      };
-    }
-
-    if (name === "category") {
-      const category = structuredPosts[post.root.url].categories[value];
-
-      if (category) {
-        value = {
-          url: category.url,
-          category: category.category
-        };
-      } else {
-        value = this.state.newCategory;
-      }
+      post.category = [
+        {
+          url: newCategory.url,
+          category: newCategory.category
+        }
+      ];
     }
 
     post[name] = value;
@@ -150,6 +133,28 @@ export default class NewPost extends Component {
     newCategory[name] = value;
 
     this.setState({ newCategory });
+  };
+
+  onChangeCategory = (index, event) => {
+    const { post } = this.state;
+    const { structuredPosts } = this.props;
+
+    let value = event.target.value;
+
+    const foundCategory = structuredPosts[post.root.url].categories[value];
+
+    if (foundCategory) {
+      value = {
+        url: foundCategory.url,
+        category: foundCategory.category
+      };
+    } else {
+      value = this.state.newCategory;
+    }
+
+    post.category[index] = value;
+
+    this.setState({ post });
   };
 
   validate() {
@@ -219,15 +224,18 @@ export default class NewPost extends Component {
     const { structuredPosts } = this.props;
 
     return (
-      <select name="root" onChange={this.onChange} value={root.url}>
-        {map(structuredPosts, root => {
-          return (
-            <option key={root.url} value={root.url}>
-              {root.heading}
-            </option>
-          );
-        })}
-      </select>
+      <div>
+        <h3>Root</h3>
+        <select name="root" onChange={this.onChange} value={root.url}>
+          {map(structuredPosts, root => {
+            return (
+              <option key={root.url} value={root.url}>
+                {root.heading}
+              </option>
+            );
+          })}
+        </select>
+      </div>
     );
   }
 
@@ -242,11 +250,40 @@ export default class NewPost extends Component {
 
     return (
       <div>
-        <select name="category" onChange={this.onChange} value={category.url}>
-          {map(categories, category => {
+        <h3>Categories</h3>
+        {category.map((categoryData, index) => {
+          return (
+            <select
+              key={categoryData.url}
+              name="category"
+              onChange={partial(this.onChangeCategory, index)}
+              value={categoryData.url}
+            >
+              {map(categories, existingCategory => {
+                return (
+                  <option
+                    key={existingCategory.url}
+                    value={existingCategory.url}
+                  >
+                    {existingCategory.category}
+                  </option>
+                );
+              })}
+              <option value={newCategory.url}>{newCategory.category}</option>
+            </select>
+          );
+        })}
+        <br />
+        <select
+          name="category"
+          onChange={partial(this.onChangeCategory, category.length)}
+          value=""
+        >
+          <option value="">Add category</option>
+          {map(categories, existingCategory => {
             return (
-              <option key={category.url} value={category.url}>
-                {category.category}
+              <option key={existingCategory.url} value={existingCategory.url}>
+                {existingCategory.category}
               </option>
             );
           })}
@@ -280,7 +317,12 @@ export default class NewPost extends Component {
             })
           : "No other posts in this category"}
         <br />
-        <input name="index" value={index} onChange={this.onChange} />
+        <input
+          type="number"
+          name="index"
+          value={index}
+          onChange={this.onChange}
+        />
         <br />
         <br />
       </div>

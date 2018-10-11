@@ -1,8 +1,10 @@
-import { each } from "lodash";
+import { each, isArray } from "lodash";
 
 function getStructuredPosts(posts) {
   let result = posts.reduce((result, post) => {
     const { root, category } = post;
+
+    const categoryArray = isArray(category) ? category : [category];
 
     if (!result[root.url]) {
       result[root.url] = {
@@ -12,17 +14,19 @@ function getStructuredPosts(posts) {
       };
     }
 
-    if (!result[root.url].categories[category.url]) {
-      result[root.url].categories[category.url] = {
-        category: category.category,
-        url: category.url,
-        posts: []
-      };
-    }
+    categoryArray.forEach(categoryData => {
+      if (!result[root.url].categories[categoryData.url]) {
+        result[root.url].categories[categoryData.url] = {
+          category: categoryData.category,
+          url: categoryData.url,
+          posts: []
+        };
+      }
 
-    const categoryPosts = result[root.url].categories[category.url].posts;
+      const categoryPosts = result[root.url].categories[categoryData.url].posts;
 
-    categoryPosts.push(post);
+      categoryPosts.push(post);
+    });
 
     return result;
   }, {});
