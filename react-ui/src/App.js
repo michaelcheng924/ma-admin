@@ -49,13 +49,14 @@ class App extends Component {
 
   getPosts = () => {
     return axios.get("/api/admin/getdb", this.getHeaders()).then(response => {
-      const { backup, posts, staging } = response.data;
+      const { backup, categoriesWithOrder, posts, staging } = response.data;
 
       const structuredPosts = getStructuredPosts(posts);
       const structuredStaging = getStructuredPosts(staging);
 
       this.setState({
         backup,
+        categoriesWithOrder,
         posts,
         staging,
         structuredPosts,
@@ -110,7 +111,7 @@ class App extends Component {
   };
 
   renderPostDetail = ({ location }) => {
-    const { staging, structuredStaging } = this.state;
+    const { categoriesWithOrder, staging, structuredStaging } = this.state;
 
     if (!staging.length) {
       return "Loading...";
@@ -118,6 +119,7 @@ class App extends Component {
 
     return (
       <PostDetail
+        categoriesWithOrder={categoriesWithOrder}
         getPosts={this.getPosts}
         getHeaders={this.getHeaders}
         location={location}

@@ -1,7 +1,6 @@
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const { isArray } = require("lodash");
-const request = require("request");
 
 const db = require("./db");
 const data = require("../backup");
@@ -53,7 +52,7 @@ function resetPosts(res, collection, collectionData) {
     });
 }
 
-function update(res, collection, post) {
+function update(res, collection, post, categoriesWithOrder) {
   if (!validate(post, true)) {
     res.status(400);
     res.send({ success: false, message: "Failed validation" });
@@ -64,7 +63,18 @@ function update(res, collection, post) {
     .doc(post.id)
     .set(post)
     .then(() => {
-      res.send({ success: true });
+      const addBatch = db.batch();
+
+      categoriesWithOrder.forEach(category => {
+        const ref = db.collection("posts_order").doc(category.url);
+        addBatch.set(ref, {
+          category
+        });
+      });
+
+      addBatch.commit().then(() => {
+        res.send({ success: true });
+      });
     });
 }
 
@@ -155,17 +165,22 @@ function routes(app) {
         db.collection("posts_staging")
           .get()
           .then(stagingSnapshot => {
-            res.send({
-              posts: postsSnapshot.docs.map(doc => ({
-                ...doc.data(),
-                id: doc.id
-              })),
-              staging: stagingSnapshot.docs.map(doc => ({
-                ...doc.data(),
-                id: doc.id
-              })),
-              backup: data
-            });
+            db.collection("posts_order")
+              .get()
+              .then(orderSnapshot => {
+                res.send({
+                  posts: postsSnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    id: doc.id
+                  })),
+                  staging: stagingSnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    id: doc.id
+                  })),
+                  backup: data,
+                  categoriesWithOrder: orderSnapshot.docs.map(doc => doc.data())
+                });
+              });
           });
       });
   });
@@ -229,15 +244,15 @@ function routes(app) {
   });
 
   app.post("/api/admin/updatepost", authorize, (req, res) => {
-    const { post } = req.body;
+    const { categoriesWithOrder, post } = req.body;
 
-    update(res, "posts", post);
+    update(res, "posts", post, categoriesWithOrder);
   });
 
   app.post("/api/admin/updatestaging", authorize, (req, res) => {
-    const { post } = req.body;
+    const { categoriesWithOrder, post } = req.body;
 
-    update(res, "posts_staging", post);
+    update(res, "posts_staging", post, categoriesWithOrder);
   });
 
   app.post("/api/admin/createpost", authorize, (req, res) => {
