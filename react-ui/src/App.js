@@ -1,13 +1,13 @@
 import React, { Component } from "react";
 import Route from "react-router-dom/Route";
 import axios from "axios";
+import { find, isArray } from "lodash";
 
 import { getStructuredPosts } from "./utils/posts";
 import Login from "./components/Login";
 import Home from "./components/Home";
 import DBManagement from "./components/DBManagement";
 import PostDetail from "./components/PostDetail";
-import NewPost from "./components/NewPost";
 
 import "./App.css";
 
@@ -73,6 +73,62 @@ class App extends Component {
     });
   };
 
+  onCommit(post, postCategoriesWithOrder, history, url, callback) {
+    const confirm = window.confirm("Are you sure?");
+
+    if (confirm) {
+      if (post.post) {
+        delete post.post;
+      }
+
+      axios
+        .post(
+          url,
+          {
+            post,
+            postCategoriesWithOrder
+          },
+          this.getHeaders()
+        )
+        .then(response => {
+          if (response.data.success) {
+            window.alert("Update successful!");
+            callback(history, post);
+          }
+        });
+    }
+  }
+
+  afterUpdate = () => {
+    this.getPosts();
+  };
+
+  afterCreate = (history, post) => {
+    this.getPosts().then(() => {
+      history.push(`/postdetail?url=${post.url}`);
+    });
+  };
+
+  onCommitUpdate = (post, postCategoriesWithOrder, history, url) => {
+    this.onCommit(
+      post,
+      postCategoriesWithOrder,
+      history,
+      url,
+      this.afterUpdate
+    );
+  };
+
+  onCommitCreate = (post, postCategoriesWithOrder, history, url) => {
+    this.onCommit(
+      post,
+      postCategoriesWithOrder,
+      history,
+      url,
+      this.afterCreate
+    );
+  };
+
   renderLogin() {
     return (
       <div>
@@ -117,12 +173,30 @@ class App extends Component {
       return "Loading...";
     }
 
+    const searchUrl = location.search.split("url=")[1];
+
+    const post =
+      find(staging, postData => {
+        return postData.url === searchUrl;
+      }) || {};
+
+    const modifiedPost = {
+      ...post,
+      category: isArray(post.category) ? post.category : [post.category]
+    };
+
+    const postCategoriesWithOrder = modifiedPost.category.map(categoryData => {
+      return find(categoriesWithOrder, categoryWithOrder => {
+        return categoryWithOrder.url === categoryData.url;
+      });
+    });
+
     return (
       <PostDetail
         categoriesWithOrder={categoriesWithOrder}
-        getPosts={this.getPosts}
-        getHeaders={this.getHeaders}
-        location={location}
+        commitPost={this.onCommitUpdate}
+        post={modifiedPost}
+        postCategoriesWithOrder={postCategoriesWithOrder}
         posts={staging}
         structuredPosts={structuredStaging}
       />
@@ -130,12 +204,37 @@ class App extends Component {
   };
 
   renderNewPost = ({ history }) => {
+    const { categoriesWithOrder, staging, structuredStaging } = this.state;
+
+    const rootData = structuredStaging[Object.keys(structuredStaging)[0]];
+
+    const post = {
+      id: "",
+      title: "",
+      subtitle: "",
+      imageUrl: "",
+      url: "",
+      added: "",
+      updated: "",
+      tags: [],
+      content: "",
+      references: [],
+      root: {
+        url: rootData.url,
+        heading: rootData.heading
+      },
+      category: []
+    };
+
     return (
-      <NewPost
-        getPosts={this.getPosts}
-        getHeaders={this.getHeaders}
+      <PostDetail
+        categoriesWithOrder={categoriesWithOrder}
+        commitPost={this.onCommitCreate}
         history={history}
-        structuredPosts={this.state.structuredStaging}
+        post={post}
+        posts={staging}
+        postCategoriesWithOrder={[]}
+        structuredPosts={structuredStaging}
       />
     );
   };

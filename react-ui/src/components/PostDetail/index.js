@@ -1,8 +1,7 @@
 import "./styles.css";
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
-import { find, isArray, map, partial } from "lodash";
+import { find, map, partial, remove, some } from "lodash";
 import Textarea from "react-textarea-autosize";
 import AceEditor from "react-ace";
 
@@ -15,29 +14,9 @@ export default class PostDetail extends Component {
   constructor(props) {
     super(props);
 
-    const { location, posts } = this.props;
-
-    const searchUrl = location.search.split("url=")[1];
-
-    const post =
-      find(posts, postData => {
-        return postData.url === searchUrl;
-      }) || {};
-
-    const modifiedPost = {
-      ...post,
-      category: isArray(post.category) ? post.category : [post.category]
-    };
-
-    const categoriesWithOrder = modifiedPost.category.map(categoryData => {
-      return find(props.categoriesWithOrder, categoryWithOrder => {
-        return categoryWithOrder.category.url === categoryData.url;
-      }).category;
-    });
-
     this.state = {
-      categoriesWithOrder,
-      post: modifiedPost,
+      post: props.post,
+      postCategoriesWithOrder: props.postCategoriesWithOrder,
       newCategory: {
         url: "",
         category: ""
@@ -83,10 +62,20 @@ export default class PostDetail extends Component {
   }
 
   onChange = event => {
-    let post = this.state.post;
+    let { post, postCategoriesWithOrder } = this.state;
     const { structuredPosts } = this.props;
 
     let { name, value } = event.target;
+
+    if (name === "title") {
+      postCategoriesWithOrder.forEach(postCategoryWithOrder => {
+        postCategoryWithOrder.posts.forEach(postData => {
+          if (postData.id === post.id) {
+            postData.title = value;
+          }
+        });
+      });
+    }
 
     if (name === "tags") {
       value = value.split(",");
@@ -111,7 +100,7 @@ export default class PostDetail extends Component {
 
     post[name] = value;
 
-    this.setState({ post });
+    this.setState({ post, postCategoriesWithOrder });
   };
 
   onContentChange = text => {
@@ -132,12 +121,14 @@ export default class PostDetail extends Component {
   };
 
   onChangeCategory = (index, event) => {
-    const { post } = this.state;
-    const { structuredPosts } = this.props;
+    const { post, postCategoriesWithOrder } = this.state;
+    const { categoriesWithOrder, posts } = this.props;
 
     let value = event.target.value;
 
-    const foundCategory = structuredPosts[post.root.url].categories[value];
+    const foundCategory = find(categoriesWithOrder, categoryWithOrder => {
+      return categoryWithOrder.url === value;
+    });
 
     if (foundCategory) {
       value = {
@@ -150,7 +141,27 @@ export default class PostDetail extends Component {
 
     post.category[index] = value;
 
-    this.setState({ post });
+    if (postCategoriesWithOrder[index]) {
+      remove(
+        postCategoriesWithOrder[index].posts,
+        postData => postData.title === post.title
+      );
+    }
+
+    foundCategory.posts = foundCategory.posts.filter(postData => {
+      return some(posts, postData1 => postData.id === postData1.id);
+    });
+
+    foundCategory.posts.push({
+      id: post.id || post.title,
+      title: post.title
+    });
+    postCategoriesWithOrder.push(foundCategory);
+
+    this.setState({
+      post,
+      postCategoriesWithOrder
+    });
   };
 
   onReferenceChange = (index, event) => {
@@ -161,12 +172,11 @@ export default class PostDetail extends Component {
   };
 
   onOrderChange = (category, postData, currentIndex, event) => {
-    let { categoriesWithOrder } = this.state;
+    let { postCategoriesWithOrder } = this.state;
 
-    let matchedCategory = find(
-      categoriesWithOrder,
-      categoryData => categoryData.category === category.category
-    );
+    let matchedCategory = find(postCategoriesWithOrder, categoryData => {
+      return categoryData.category === category.category;
+    });
 
     matchedCategory.posts.splice(currentIndex, 1);
 
@@ -179,67 +189,18 @@ export default class PostDetail extends Component {
       };
     });
 
-    this.setState({ categoriesWithOrder });
+    this.setState({ postCategoriesWithOrder });
   };
 
-  validate() {
-    const { post } = this.state;
+  onCommit = url => {
+    const { post, postCategoriesWithOrder } = this.state;
 
-    let validated = true;
-
-    const keys = [
-      "id",
-      "title",
-      "subtitle",
-      "imageUrl",
-      "imageUrlSmall",
-      "url",
-      "content",
-      "tags"
-    ];
-
-    keys.forEach(key => {
-      if (!post[key]) {
-        validated = false;
-      }
-    });
-
-    return validated;
-  }
-
-  onUpdate(url) {
-    const confirm = window.confirm("Are you sure?");
-
-    if (confirm) {
-      const { getPosts } = this.props;
-
-      let { categoriesWithOrder, post } = this.state;
-      post.post = undefined;
-
-      axios
-        .post(
-          url,
-          {
-            categoriesWithOrder,
-            post
-          },
-          this.props.getHeaders()
-        )
-        .then(response => {
-          if (response.data.success) {
-            window.alert("Update successful!");
-            getPosts();
-          }
-        });
-    }
-  }
-
-  updatePost = () => {
-    this.onUpdate("/api/admin/updatepost");
-  };
-
-  updateStaging = () => {
-    this.onUpdate("/api/admin/updatestaging");
+    this.props.commitPost(
+      post,
+      postCategoriesWithOrder,
+      this.props.history,
+      url
+    );
   };
 
   renderRoots() {
@@ -263,7 +224,7 @@ export default class PostDetail extends Component {
   }
 
   renderCategories() {
-    const { categoriesWithOrder, post, newCategory } = this.state;
+    const { postCategoriesWithOrder, post, newCategory } = this.state;
     const { category, root } = post;
     const { structuredPosts } = this.props;
 
@@ -328,7 +289,7 @@ export default class PostDetail extends Component {
           />
         </div>
         <br />
-        {categoriesWithOrder.map(categoryData => {
+        {postCategoriesWithOrder.map(categoryData => {
           return (
             <div key={categoryData.category}>
               <div>
@@ -336,7 +297,7 @@ export default class PostDetail extends Component {
               </div>
               {categoryData.posts.map((postData, index) => {
                 return (
-                  <div key={postData.id}>
+                  <div key={postData.id || postData.title}>
                     <select
                       value={index}
                       onChange={partial(
@@ -346,7 +307,7 @@ export default class PostDetail extends Component {
                         index
                       )}
                     >
-                      {categories[categoryData.url].posts.map((item, index) => {
+                      {categoryData.posts.map((item, index) => {
                         return (
                           <option key={index} value={index}>
                             {index}
@@ -430,7 +391,7 @@ export default class PostDetail extends Component {
           </div>
           <br />
           <div>
-            {this.state.categoriesWithOrder.map(item => {
+            {this.state.postCategoriesWithOrder.map(item => {
               return (
                 <div key={item.category}>
                   <div>
@@ -531,8 +492,12 @@ export default class PostDetail extends Component {
         </div>
 
         <div className="post-detail__save-buttons">
-          <button onClick={this.updatePost}>Update Posts</button>
-          <button onClick={this.updateStaging}>Update Staging</button>
+          <button onClick={partial(this.onCommit, "/api/admin/updatepost")}>
+            Commit Posts
+          </button>
+          <button onClick={partial(this.onCommit, "/api/admin/updateStaging")}>
+            Commit Staging
+          </button>
         </div>
       </div>
     );

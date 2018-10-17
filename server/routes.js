@@ -1,6 +1,6 @@
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
-const { isArray } = require("lodash");
+const { find } = require("lodash");
 
 const db = require("./db");
 const data = require("../backup");
@@ -52,74 +52,31 @@ function resetPosts(res, collection, collectionData) {
     });
 }
 
-function update(res, collection, post, categoriesWithOrder) {
-  if (!validate(post, true)) {
-    res.status(400);
-    res.send({ success: false, message: "Failed validation" });
-    return;
-  }
+function update(res, collection, post, postCategoriesWithOrder) {
+  const doc = post.id
+    ? db.collection(collection).doc(post.id)
+    : db.collection(collection).doc();
 
-  db.collection(collection)
-    .doc(post.id)
-    .set(post)
-    .then(() => {
-      const addBatch = db.batch();
+  doc.set(post).then(() => {
+    const addBatch = db.batch();
 
-      categoriesWithOrder.forEach(category => {
-        const ref = db.collection("posts_order").doc(category.url);
-        addBatch.set(ref, {
-          category
-        });
-      });
+    postCategoriesWithOrder.forEach(category => {
+      const ref = db.collection("posts_order").doc(category.url);
 
-      addBatch.commit().then(() => {
-        res.send({ success: true });
+      if (!post.id) {
+        let foundPost = find(category.posts, postData => !postData.id);
+        foundPost.id = doc.id;
+      }
+
+      addBatch.set(ref, {
+        ...category
       });
     });
-}
 
-function create(res, collection, post) {
-  if (!validate(post)) {
-    res.status(400);
-    res.send({ success: false, message: "Failed validation" });
-    return;
-  }
-
-  db.collection(collection)
-    .doc()
-    .set(post)
-    .then(() => {
+    addBatch.commit().then(() => {
       res.send({ success: true });
     });
-}
-
-function validate(post, isUpdate) {
-  let validated = true;
-
-  const keys = [
-    "title",
-    "subtitle",
-    "imageUrl",
-    "imageUrlSmall",
-    "url",
-    "content"
-  ];
-
-  if (isUpdate) {
-    keys.push("id");
-  }
-
-  keys.forEach(key => {
-    if (!post[key]) {
-      validated = false;
-    }
   });
-
-  if (!post.tags || !isArray(post.tags)) {
-    validated = false;
-  }
-
-  return validated;
 }
 
 function routes(app) {
@@ -244,27 +201,15 @@ function routes(app) {
   });
 
   app.post("/api/admin/updatepost", authorize, (req, res) => {
-    const { categoriesWithOrder, post } = req.body;
+    const { postCategoriesWithOrder, post } = req.body;
 
-    update(res, "posts", post, categoriesWithOrder);
+    update(res, "posts", post, postCategoriesWithOrder);
   });
 
   app.post("/api/admin/updatestaging", authorize, (req, res) => {
-    const { categoriesWithOrder, post } = req.body;
+    const { postCategoriesWithOrder, post } = req.body;
 
-    update(res, "posts_staging", post, categoriesWithOrder);
-  });
-
-  app.post("/api/admin/createpost", authorize, (req, res) => {
-    const { post } = req.body;
-
-    create(res, "posts", post);
-  });
-
-  app.post("/api/admin/createstaging", authorize, (req, res) => {
-    const { post } = req.body;
-
-    create(res, "posts_staging", post);
+    update(res, "posts_staging", post, postCategoriesWithOrder);
   });
 }
 
