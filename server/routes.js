@@ -1,6 +1,6 @@
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
-const { find } = require("lodash");
+const { find, isObject } = require("lodash");
 
 const db = require("./db");
 const data = require("../backup");
@@ -52,7 +52,13 @@ function resetPosts(res, collection, collectionData) {
     });
 }
 
-function update(res, collection, post, postCategoriesWithOrder) {
+function update(
+  res,
+  collection,
+  collectionOrder,
+  post,
+  postCategoriesWithOrder
+) {
   const doc = post.id
     ? db.collection(collection).doc(post.id)
     : db.collection(collection).doc();
@@ -61,7 +67,7 @@ function update(res, collection, post, postCategoriesWithOrder) {
     const addBatch = db.batch();
 
     postCategoriesWithOrder.forEach(category => {
-      const ref = db.collection("posts_order").doc(category.url);
+      const ref = db.collection(collectionOrder).doc(category.url);
 
       if (!post.id) {
         let foundPost = find(category.posts, postData => !postData.id);
@@ -122,7 +128,7 @@ function routes(app) {
         db.collection("posts_staging")
           .get()
           .then(stagingSnapshot => {
-            db.collection("posts_order")
+            db.collection("posts_order_staging")
               .get()
               .then(orderSnapshot => {
                 res.send({
@@ -203,13 +209,19 @@ function routes(app) {
   app.post("/api/admin/updatepost", authorize, (req, res) => {
     const { postCategoriesWithOrder, post } = req.body;
 
-    update(res, "posts", post, postCategoriesWithOrder);
+    update(res, "posts", "posts_order", post, postCategoriesWithOrder);
   });
 
   app.post("/api/admin/updatestaging", authorize, (req, res) => {
     const { postCategoriesWithOrder, post } = req.body;
 
-    update(res, "posts_staging", post, postCategoriesWithOrder);
+    update(
+      res,
+      "posts_staging",
+      "posts_order_staging",
+      post,
+      postCategoriesWithOrder
+    );
   });
 }
 

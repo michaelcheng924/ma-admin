@@ -19,22 +19,8 @@ export default class NewPost extends Component {
       props.structuredPosts[Object.keys(props.structuredPosts)[0]];
 
     this.state = {
-      post: {
-        title: "",
-        subtitle: "",
-        imageUrl: "",
-        url: "",
-        added: "",
-        updated: "",
-        tags: [],
-        content: "",
-        references: [],
-        root: {
-          url: rootData.url,
-          heading: rootData.heading
-        },
-        category: []
-      },
+      post: props.post,
+      postCategoriesWithOrder: [],
       newCategory: {
         url: "",
         category: ""
@@ -182,11 +168,6 @@ export default class NewPost extends Component {
   }
 
   onCreate(url) {
-    if (!this.validate()) {
-      window.alert("Missing fields");
-      return;
-    }
-
     const confirm = window.confirm("Are you sure?");
 
     if (confirm) {
